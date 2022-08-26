@@ -54,3 +54,44 @@ Group BY position
 -- Question 5 Find the average number of strikeouts per game by decade since 1920. Round the numbers you report to 2 decimal places. Do the same for home runs per game. Do you see any trends?
 
 Select 
+ROUND((ROUND(AVG(so),2) / (SUM(g) / 2)), 2) AS avg_so_pg,
+	ROUND((ROUND(AVG(hr),2) / (SUM(g) / 2)), 2) AS avg_hr_pg,
+        Case When yearid >= '1920' And yearid <= '1929' Then '1920s'
+        When yearid >= '1930' And yearid <= '1939' Then '1930s'
+		When yearid >= '1940' And yearid <= '1949' Then '1940s'
+		When yearid >= '1950' And yearid <= '1959' Then '1950s'
+		When yearid >= '1960' And yearid <= '1969' Then '1960s'
+		When yearid >= '1970' And yearid <= '1979' Then '1970s'
+		When yearid >= '1980' And yearid <= '1989' Then '1980s'
+		When yearid >= '1990' And yearid <= '1999' Then '1990s'
+		When yearid >= '2000' And yearid <= '2009' Then '2000s'
+		When yearid >= '2010' And yearid <= '2019' Then '2010s'
+		End AS decade
+From teams
+Where yearid >= '1920'
+Group by decade
+Order By decade DESC
+
+
+
+--Question 6 Find the player who had the most success stealing bases in 2016, where success is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted at least 20 stolen bases.
+Select
+	Distinct b.playerid,
+	p.namefirst,
+	p.namelast,
+	Cast(b.sb AS numeric) AS bases_stolen,
+	Cast(b.cs AS numeric) AS caught_stealing,
+	Cast(b.sb AS numeric) + Cast(b.cs AS numeric) AS attempts,
+	Round((Cast(b.sb AS numeric) / (Cast(b.sb AS numeric) + Cast(b.cs AS numeric))), 2) AS success
+FROM batting AS b
+JOIN people AS p
+ON b.playerid = p.playerid
+WHERE b.yearid = '2016'
+GROUP BY
+	b.playerid,
+	p.namefirst,
+	p.namelast,
+	b.sb,
+	b.cs
+HAVING CAST(sb AS numeric) + CAST(cs AS numeric) >= 20
+ORDER BY success DESC;
