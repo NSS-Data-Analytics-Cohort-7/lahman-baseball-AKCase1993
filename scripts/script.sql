@@ -54,44 +54,36 @@ Group BY position
 -- Question 5 Find the average number of strikeouts per game by decade since 1920. Round the numbers you report to 2 decimal places. Do the same for home runs per game. Do you see any trends?
 
 Select 
-ROUND((ROUND(AVG(so),2) / (SUM(g) / 2)), 2) AS avg_so_pg,
-	ROUND((ROUND(AVG(hr),2) / (SUM(g) / 2)), 2) AS avg_hr_pg,
-        Case When yearid >= '1920' And yearid <= '1929' Then '1920s'
-        When yearid >= '1930' And yearid <= '1939' Then '1930s'
-		When yearid >= '1940' And yearid <= '1949' Then '1940s'
-		When yearid >= '1950' And yearid <= '1959' Then '1950s'
-		When yearid >= '1960' And yearid <= '1969' Then '1960s'
-		When yearid >= '1970' And yearid <= '1979' Then '1970s'
-		When yearid >= '1980' And yearid <= '1989' Then '1980s'
-		When yearid >= '1990' And yearid <= '1999' Then '1990s'
-		When yearid >= '2000' And yearid <= '2009' Then '2000s'
-		When yearid >= '2010' And yearid <= '2019' Then '2010s'
-		End AS decade
+    Case When (yearid/10)*10 = 2010 Then Concat((yearid/10)*10, '-', ((yearid/10)*10)+6)
+        Else Concat((yearid/10)*10,'-',((yearid/10)*10)+9) End AS decade,
+    Round(Cast(Sum(so) AS Decimal)/Cast(Sum(g)/2 AS Decimal), 2) AS avg_strikeouts,
+    Round(Cast(Sum(hr) AS Decimal)/Cast(Sum(g)/2 AS Decimal), 2) AS avg_homeruns
 From teams
 Where yearid >= '1920'
 Group by decade
-Order By decade DESC
-
+Order By decade 
 
 
 --Question 6 Find the player who had the most success stealing bases in 2016, where success is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted at least 20 stolen bases.
-Select
-	Distinct b.playerid,
-	p.namefirst,
-	p.namelast,
-	Cast(b.sb AS numeric) AS bases_stolen,
-	Cast(b.cs AS numeric) AS caught_stealing,
-	Cast(b.sb AS numeric) + Cast(b.cs AS numeric) AS attempts,
-	Round((Cast(b.sb AS numeric) / (Cast(b.sb AS numeric) + Cast(b.cs AS numeric))), 2) AS success
-FROM batting AS b
-JOIN people AS p
-ON b.playerid = p.playerid
-WHERE b.yearid = '2016'
-GROUP BY
-	b.playerid,
-	p.namefirst,
-	p.namelast,
-	b.sb,
-	b.cs
-HAVING CAST(sb AS numeric) + CAST(cs AS numeric) >= 20
-ORDER BY success DESC;
+
+
+Select batting.playerid,
+	namefirst,
+	namelast,
+	Sum(sb) AS successful_sb,
+	Sum(sb + cs) AS total_attempts,
+	Sum(sb)/Cast(Sum(sb +cs) AS decimal(10,2))*100 AS successful_attempts
+From batting
+Left Join people
+ON batting.playerid = people.playerid
+Where batting.yearid = '2016'
+Group By batting.playerid,
+	namefirst,
+	namelast
+Having Sum(sb + cs) >= 20
+Order BY successful_attempts DESC
+
+-- Question 7 From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+
+
+
