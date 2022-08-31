@@ -85,5 +85,203 @@ Order BY successful_attempts DESC
 
 -- Question 7 From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
 
+SELECT yearid,
+	name, 
+	MAX(w)
+FROM teams
+WHERE wswin = 'N'
+	AND yearid BETWEEN 1970 AND 2016
+GROUP BY yearid,
+	name
+ORDER BY MAX(w) DESC
+    
+-- Largest number of wins for team that lostwin World Series: 116, Seattle Mariners, 2001
+Select yearid,
+	name, 
+	MIN(w)
+From teams
+Where wswin = 'Y'
+	AND yearid BETWEEN 1970 AND 2016
+	AND yearid <> 1981
+Group BY yearid,
+	name
+Order BY MIN(w);
+-- Smallest number of wins for team that won the World Series: 83, St. Louis Cardinals, 2006
+
+With top_scores AS
+(SELECT DISTINCT a.yearid,
+	a.name,
+	a.w,
+	a.wswin
+FROM teams AS a
+INNER JOIN (
+	SELECT yearid,
+			MAX(w) AS w
+	FROM teams
+	GROUP BY yearid
+	ORDER BY yearid) AS b
+ON a.yearid = b.yearid AND a.w = b.w
+WHERE a.yearid BETWEEN 1970 AND 2016)
+SELECT SUM(CASE WHEN wswin = 'Y' THEN 1
+		   WHEN wswin = 'N' THEN 0 END) AS total
+	FROM top_scores
+-- Number of times team with most wins won World Series: 12 
+
+WITH top_scores AS
+(SELECT DISTINCT a.yearid,
+	a.w,
+	a.wswin
+FROM teams AS a
+Inner Join (
+		SELECT yearid,
+				MAX(w) AS w
+		FROM teams
+		GROUP BY yearid
+		ORDER BY yearid) AS b
+ON a.yearid = b.yearid AND a.w = b.w
+WHERE a.yearid BETWEEN 1970 AND 2016)
+Select Cast(AVG(CASE WHEN wswin = 'Y' THEN 1.0
+		   WHEN wswin = 'N' THEN 0.0 END)*100.0 AS DECIMAL(10,2)) AS avg
+	FROM top_scores
+-- Percent of times team with most wins won World Series: 25%
+
+-- Question 8 Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
+
+SELECT 
+	p.park_name,
+	t.name,
+	(h.attendance / h.games) AS avg_attendance
+FROM homegames AS h
+INNER JOIN parks AS p
+ON h.park = p.park
+INNER JOIN teams AS t
+ON h.team = t.teamid
+WHERE h.year = '2016' 
+	AND t.yearid = '2016'
+	AND h.games >= 10
+GROUP BY
+	p.park_name,
+	t.name,
+	h.attendance,
+    h.games
+ORDER BY avg_attendance DESC;
+--TOP AVERAGE ATTENDANCE:
+	/*Dodger Stadium, Los Angeles Dodgers, 45719
+	Busch Stadium III, St. Louis Cardinals, 42524
+	Rogers Centre, Toronto Blue Jays, 41877
+	AT&T Park, San Francisco Giants, 41546
+	Wrigley Field, Chicago Cubs, 39906*/
+SELECT 
+	p.park_name,
+	t.name,
+	(h.attendance / h.games) AS avg_attendance
+FROM homegames AS h
+INNER JOIN parks AS p
+ON h.park = p.park
+INNER JOIN teams AS t
+ON h.team = t.teamid
+WHERE h.year = '2016' 
+	AND t.yearid = '2016'
+	AND h.games >= 10
+GROUP BY
+    p.park_name,
+	t.name,
+	h.attendance,
+	h.games
+ORDER BY avg_attendance
+
+-- BOTTOM AVERAGE ATTENDANCE:
+	/*Tropicana Field, Tampa Bay Rays, 15878
+	Oakland-Alameda County Coliseum, Oakland Athletics, 18784
+	Progressive Field, Cleveland Indians, 19650
+	Marlins Park, Miami Marlins, 21405
+	U.S. Cellular Field, Chicago White Sox, 21559*/
+
+--Question 9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award. 
+
+SELECT * 
+FROM awardsmanagers;
+-- playerid
+SELECT *
+FROM people;
+-- playerid
+SELECT *
+FROM teams;
+-- teamid
+SELECT *
+FROM managers;
 
 
+WITH a AS (
+	SELECT namefirst as first,
+	namelast as last,
+	am.yearid,
+	awardid,
+	p.playerid,
+	lgid
+	FROM awardsmanagers as am
+	FULL join people as p
+	ON am.playerid = p.playerid
+	WHERE lgid = 'AL'
+	AND awardid = 'TSN Manager of the Year'
+	order by namelast, yearid),
+b AS (
+	SELECT namefirst as first,
+	namelast as last,
+	am.yearid,
+	awardid,
+	p.playerid,
+	lgid
+	FROM awardsmanagers as am
+	FULL join people as p
+	ON am.playerid = p.playerid
+	WHERE lgid = 'NL'
+	AND awardid = 'TSN Manager of the Year'
+	order by namelast, yearid)
+-- c AS (SELECT *
+-- 	  FROM teams AS T
+-- 	 LEFT JOIN managers as M
+-- 	 USING (teamid)
+	
+SELECT a.first,
+	a.last,
+	 a.yearid AS AL_year,
+	 a.lgid AS AL_award,
+	b.yearid AS NL_year,
+	b.lgid AS NL_award,
+	t.name
+FROM a
+INNER JOIN b 
+ON a.playerid = b.playerid
+LEFT JOIN managers as m
+ON m.playerid = a.playerid
+LEFT JOIN teams as t
+ON t.teamid = m.teamid
+ORDER BY nl_year
+
+--Question 10 Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+
+With homers as(
+Select playerid,
+    Max(hr) as twentysixteenhr
+From batting
+Where yearid = 2016
+Group by playerid)
+
+
+Select b.playerid,
+    Concat(p.namefirst, ' ', p.namelast) as namefull,
+    Max(hr) AS actualmaxhomers,
+    twentysixteenhr
+From batting AS b
+Left Join homers
+ON b.playerid = homers.playerid
+Inner Join people as p
+    ON b.playerid = p.playerid
+Where twentysixteenhr > 0
+Group BY b.playerid, twentysixteenhr, namefull
+Having Max(hr) = twentysixteenhr
+    And Max(yearid) - min(yearid) >= 10
+Order BY Max(b.hr) Desc
+
+-- Question 11 Is there any correlation between number of wins and team salary? Use data from 2000 and later to answer this question. As you do this analysis, keep in mind that salaries across the whole league tend to increase together, so you may want to look on a year-by-year basis.
